@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Matrix Interface</title>
+<title>Matrix Shopping</title>
 
 <style>
 *{
@@ -13,65 +13,91 @@
 }
 
 body{
-    overflow:hidden;
-    background:black;
+    background:#000;
+    color:#00ff41;
     font-family:Consolas, monospace;
+    overflow-x:hidden;
 }
 
 canvas{
     position:fixed;
     top:0;
     left:0;
-    z-index:0;
+    z-index:-1;
 }
 
-.panel{
-    position:absolute;
-    top:50%;
-    left:50%;
-    transform:translate(-50%,-50%);
-    width:80%;
-    max-width:700px;
-    padding:30px;
-    background:rgba(0,0,0,0.7);
-    border:1px solid #00ff00;
-    box-shadow:0 0 20px #00ff00;
-    color:#00ff00;
-    z-index:1;
+.container{
+    max-width:900px;
+    margin:40px auto;
+    padding:20px;
+    background:rgba(0,0,0,0.8);
+    border:1px solid #00ff41;
+    box-shadow:0 0 20px #00ff41;
 }
 
 h1{
     text-align:center;
     margin-bottom:20px;
-    text-shadow:0 0 10px #00ff00;
+    text-shadow:0 0 10px #00ff41;
 }
 
-input{
-    width:100%;
-    padding:12px;
-    margin-top:10px;
-    background:black;
-    color:#00ff00;
-    border:1px solid #00ff00;
-    outline:none;
+.form{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+input,select{
+    flex:1;
+    padding:10px;
+    background:#000;
+    color:#00ff41;
+    border:1px solid #00ff41;
 }
 
 button{
-    margin-top:10px;
-    padding:12px;
-    width:100%;
-    background:#00ff00;
-    color:black;
+    padding:10px 15px;
+    background:#00ff41;
+    color:#000;
     border:none;
     cursor:pointer;
     font-weight:bold;
 }
 
-.output{
-    margin-top:20px;
-    min-height:100px;
-    border:1px solid #00ff00;
+button:hover{
+    box-shadow:0 0 15px #00ff41;
+}
+
+.stats{
+    display:flex;
+    justify-content:space-around;
+    margin:20px 0;
+    border:1px solid #00ff41;
     padding:10px;
+}
+
+.item{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border:1px solid #00ff41;
+    padding:10px;
+    margin-top:10px;
+}
+
+.comprado{
+    text-decoration:line-through;
+    opacity:0.5;
+}
+
+.ia{
+    margin-top:20px;
+    padding:15px;
+    border:1px solid #00ff41;
+}
+
+small{
+    color:#7fff7f;
 }
 </style>
 </head>
@@ -79,25 +105,53 @@ button{
 
 <canvas id="matrix"></canvas>
 
-<div class="panel">
-    <h1>MATRIX TERMINAL</h1>
+<div class="container">
 
+<h1>🟢 MATRIX SHOPPING SYSTEM</h1>
+
+<div class="form">
     <input
-        type="text"
-        id="command"
-        placeholder="Digite um comando..."
+        id="produto"
+        placeholder="DIGITE UM PRODUTO..."
     >
 
-    <button onclick="executar()">
-        EXECUTAR
-    </button>
+    <select id="categoria">
+        <option>HORTIFRUTI</option>
+        <option>CARNES</option>
+        <option>LATICÍNIOS</option>
+        <option>LIMPEZA</option>
+        <option>BEBIDAS</option>
+        <option>PADARIA</option>
+        <option>OUTROS</option>
+    </select>
 
-    <div class="output" id="output">
-        Sistema iniciado...
-    </div>
+    <button onclick="adicionar()">
+        ADICIONAR
+    </button>
+</div>
+
+<div class="stats">
+    <div>TOTAL: <span id="total">0</span></div>
+    <div>COMPRADOS: <span id="comprados">0</span></div>
+</div>
+
+<div id="lista"></div>
+
+<div class="ia">
+    <h3>🤖 IA MATRIX</h3>
+    <p id="sugestao">
+        Nenhuma sugestão disponível.
+    </p>
+</div>
+
 </div>
 
 <script>
+
+/* ==========================
+   MATRIX RAIN
+========================== */
+
 const canvas = document.getElementById("matrix");
 const ctx = canvas.getContext("2d");
 
@@ -105,7 +159,7 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 const chars =
-"アァカサタナハマヤャラワガザダバパ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+"アイウエオカキクケコ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 const letters = chars.split("");
 
@@ -118,18 +172,20 @@ for(let i=0;i<columns;i++){
     drops[i]=1;
 }
 
-function draw(){
+function drawMatrix(){
 
     ctx.fillStyle="rgba(0,0,0,0.05)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    ctx.fillStyle="#00ff00";
+    ctx.fillStyle="#00ff41";
     ctx.font=fontSize+"px monospace";
 
     for(let i=0;i<drops.length;i++){
 
         const text =
-        letters[Math.floor(Math.random()*letters.length)];
+        letters[Math.floor(
+            Math.random()*letters.length
+        )];
 
         ctx.fillText(
             text,
@@ -148,42 +204,145 @@ function draw(){
     }
 }
 
-setInterval(draw,33);
+setInterval(drawMatrix,33);
 
-function executar(){
+/* ==========================
+   SHOPPING APP
+========================== */
 
-    const cmd =
-    document.getElementById("command")
-    .value
-    .toLowerCase();
+let produtos =
+JSON.parse(localStorage.getItem("matrixShopping"))
+|| [];
 
-    let resposta = "";
+function salvar(){
+    localStorage.setItem(
+        "matrixShopping",
+        JSON.stringify(produtos)
+    );
+}
 
-    if(cmd === "help"){
-        resposta =
-        "Comandos: help, hack, matrix, clear";
-    }
-    else if(cmd === "hack"){
-        resposta =
-        "Acesso negado. Firewall detectado.";
-    }
-    else if(cmd === "matrix"){
-        resposta =
-        "Bem-vindo à Matrix.";
-    }
-    else if(cmd === "clear"){
-        document.getElementById("output")
-        .innerHTML = "";
+function adicionar(){
+
+    const nome =
+    document.getElementById("produto")
+    .value.trim();
+
+    const categoria =
+    document.getElementById("categoria")
+    .value;
+
+    if(nome === "") return;
+
+    produtos.push({
+        nome,
+        categoria,
+        comprado:false
+    });
+
+    salvar();
+    renderizar();
+
+    document.getElementById("produto").value="";
+}
+
+function remover(i){
+
+    produtos.splice(i,1);
+
+    salvar();
+    renderizar();
+}
+
+function comprar(i){
+
+    produtos[i].comprado =
+    !produtos[i].comprado;
+
+    salvar();
+    renderizar();
+}
+
+function renderizar(){
+
+    const lista =
+    document.getElementById("lista");
+
+    lista.innerHTML="";
+
+    produtos.forEach((item,index)=>{
+
+        lista.innerHTML += `
+        <div class="item">
+            <div class="${
+                item.comprado
+                ? "comprado"
+                : ""
+            }">
+
+                <strong>${item.nome}</strong>
+                <br>
+                <small>${item.categoria}</small>
+
+            </div>
+
+            <div>
+                <button onclick="comprar(${index})">
+                    ✓
+                </button>
+
+                <button onclick="remover(${index})">
+                    X
+                </button>
+            </div>
+        </div>
+        `;
+    });
+
+    document.getElementById("total")
+    .textContent = produtos.length;
+
+    document.getElementById("comprados")
+    .textContent =
+    produtos.filter(
+        p=>p.comprado
+    ).length;
+
+    gerarSugestao();
+}
+
+function gerarSugestao(){
+
+    if(produtos.length === 0){
+        document.getElementById(
+            "sugestao"
+        ).innerText =
+        "Adicione produtos para ativar a IA.";
         return;
     }
-    else{
-        resposta =
-        "Comando desconhecido.";
-    }
 
-    document.getElementById("output")
-    .innerHTML += "<br>> " + resposta;
+    const contador = {};
+
+    produtos.forEach(p=>{
+        contador[p.nome] =
+        (contador[p.nome] || 0)+1;
+    });
+
+    const favorito =
+    Object.keys(contador)
+    .sort(
+        (a,b)=>
+        contador[b]-contador[a]
+    )[0];
+
+    document.getElementById(
+        "sugestao"
+    ).innerHTML =
+    `Detectado padrão de compra.<br>
+     Recomendação: <strong>${favorito}</strong>`;
 }
+
+renderizar();
+
 </script>
 
 </body>
