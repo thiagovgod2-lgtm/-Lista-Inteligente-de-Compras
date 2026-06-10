@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lista Inteligente de Compras</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:Arial,sans-serif;
+    background:#f4f4f4;
+    padding:20px;
+}
+
+.container{
+    max-width:800px;
+    margin:auto;
+    background:white;
+    padding:20px;
+    border-radius:15px;
+    box-shadow:0 0 15px rgba(0,0,0,.1);
+}
+
+h1{
+    text-align:center;
+    margin-bottom:20px;
+}
+
+.form{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+input,select,button{
+    padding:10px;
+    border-radius:8px;
+    border:1px solid #ccc;
+}
+
+input{
+    flex:1;
+}
+
+button{
+    cursor:pointer;
+}
+
+.stats{
+    margin:20px 0;
+    display:flex;
+    justify-content:space-around;
+    font-weight:bold;
+}
+
+.item{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px;
+    margin-top:10px;
+    border-radius:8px;
+    background:#eee;
+}
+
+.comprado{
+    text-decoration:line-through;
+    opacity:.6;
+}
+
+.acoes button{
+    margin-left:5px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🛒 Lista Inteligente de Compras</h1>
+
+<div class="form">
+    <input id="produto" placeholder="Digite um produto">
+    
+    <select id="categoria">
+        <option>Hortifruti</option>
+        <option>Carnes</option>
+        <option>Laticínios</option>
+        <option>Limpeza</option>
+        <option>Bebidas</option>
+        <option>Padaria</option>
+        <option>Outros</option>
+    </select>
+
+    <button onclick="adicionar()">Adicionar</button>
+</div>
+
+<div class="stats">
+    <span>Total: <span id="total">0</span></span>
+    <span>Comprados: <span id="comprados">0</span></span>
+</div>
+
+<div id="sugestoes"></div>
+
+<hr style="margin:20px 0">
+
+<div id="lista"></div>
+
+</div>
+
+<script>
+
+let produtos =
+JSON.parse(localStorage.getItem("compras")) || [];
+
+function salvar(){
+    localStorage.setItem(
+        "compras",
+        JSON.stringify(produtos)
+    );
+}
+
+function adicionar(){
+
+    let nome =
+    document.getElementById("produto").value;
+
+    let categoria =
+    document.getElementById("categoria").value;
+
+    if(nome.trim()==="") return;
+
+    produtos.push({
+        nome,
+        categoria,
+        comprado:false
+    });
+
+    salvar();
+    renderizar();
+
+    document.getElementById("produto").value="";
+}
+
+function alternar(i){
+    produtos[i].comprado =
+    !produtos[i].comprado;
+
+    salvar();
+    renderizar();
+}
+
+function remover(i){
+    produtos.splice(i,1);
+    salvar();
+    renderizar();
+}
+
+function renderizar(){
+
+    let lista =
+    document.getElementById("lista");
+
+    lista.innerHTML="";
+
+    produtos.forEach((p,i)=>{
+
+        lista.innerHTML += `
+        <div class="item">
+            <div class="${p.comprado ? 'comprado' : ''}">
+                <strong>${p.nome}</strong>
+                <br>
+                <small>${p.categoria}</small>
+            </div>
+
+            <div class="acoes">
+                <button onclick="alternar(${i})">
+                    ✓
+                </button>
+
+                <button onclick="remover(${i})">
+                    🗑️
+                </button>
+            </div>
+        </div>
+        `;
+    });
+
+    document.getElementById("total")
+    .textContent = produtos.length;
+
+    document.getElementById("comprados")
+    .textContent =
+    produtos.filter(
+        p=>p.comprado
+    ).length;
+
+    gerarSugestoes();
+}
+
+function gerarSugestoes(){
+
+    let contador = {};
+
+    produtos.forEach(p=>{
+        contador[p.nome] =
+        (contador[p.nome] || 0) + 1;
+    });
+
+    let sugestoes =
+    Object.keys(contador)
+    .sort((a,b)=>
+        contador[b]-contador[a]
+    )
+    .slice(0,3);
+
+    document.getElementById(
+        "sugestoes"
+    ).innerHTML =
+    sugestoes.length
+    ?
+    `<h3>💡 Sugestões:</h3>
+    ${sugestoes.join(", ")}`
+    :
+    "";
+}
+
+renderizar();
+
+</script>
+
+</body>
+</html>
